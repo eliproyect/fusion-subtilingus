@@ -1,7 +1,7 @@
 package com.elisotopo.subtilingus
 
 // ============================================================
-// Subtilingus · Fase 1.1 — Modo depuración (v0.4)
+// Subtilingus · Fase 1.1 — Modo depuración (v0.5)
 // ============================================================
 // Lo aprendido en la Fase 1: cuando algo falla y no hay registros,
 // estamos a ciegas. Esta versión añade:
@@ -9,18 +9,20 @@ package com.elisotopo.subtilingus
 //   · Pestaña "Registro": cada paso deja una línea con hora,
 //     etiqueta y nivel (I=info, W=atención, E=error). También se
 //     guarda en registro.log para poder compartirlo.
-//   · Medidor de nivel del micrófono (barra + dB): si no se mueve,
-//     el problema es la captura de audio, no Whisper.
-//   · Contadores en vivo: trozos leídos, bloques capturados,
-//     descartados y procesados, caracteres de texto.
-//   · whisper-jni.c ahora "cuenta lo que hace" y Kotlin se lo
-//     pregunta tras cada bloque (función estadoNativo).
-//   · Los archivos (modelo, transcripción, registro) viven en la
-//     carpeta externa de la app, visible desde un PC por USB.
+//   · Pestaña "Archivos": mini-explorador de la carpeta de la app
+//     (Android 11+ no deja entrar a los gestores de archivos en
+//     Android/data/, pero la app sí puede mirar lo suyo).
+//   · Medidor de nivel del micrófono (barra + dB).
+//   · Contadores en vivo y resumen del mundo C tras cada bloque.
+//   · "Limpiar" en Archivos ofrece BORRAR de verdad transcripción
+//     o modelo (con diálogo de confirmación).
+//   · NUEVO v0.5: los bloques de silencio no se envían a Whisper
+//     (ahorra batería y evita frases fantasma).
 // ============================================================
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioFormat
@@ -64,6 +66,10 @@ class MainActivity : Activity() {
         // Cuántas líneas guardamos en memoria (la de la pantalla).
         // El archivo registro.log guarda todas.
         const val MAX_ENTRADAS_REGISTRO = 600
+        // Nivel medio (dB) por debajo del cual un bloque se considera
+        // silencio y NO se envía a Whisper. -50 dB es un despacho
+        // callado: la voz hablada se mueve entre -35 y -15 dB.
+        const val UMBRAL_SILENCIO_DB = -50.0
     }
 
     // ---- vistas ----
@@ -71,8 +77,10 @@ class MainActivity : Activity() {
     private lateinit var stats: TextView
     private lateinit var transcripcion: TextView
     private lateinit var registroTexto: TextView
+    private lateinit var archivosTexto: TextView
     private lateinit var scrollTranscripcion: ScrollView
     private lateinit var scrollRegistro: ScrollView
+    private lateinit var scrollArchivos: ScrollView
     private lateinit var nivelBarra: ProgressBar
     private lateinit var botonModelo: Button
     private lateinit var botonIdioma: Button
@@ -83,8 +91,6 @@ class MainActivity : Activity() {
     private lateinit var pestanaTexto: Button
     private lateinit var pestanaRegistro: Button
     private lateinit var pestanaArchivos: Button
-    private lateinit var scrollArchivos: ScrollView
-    private lateinit var archivosTexto: TextView
 
     private val bridge = WhisperBridge()
 
@@ -101,6 +107,7 @@ class MainActivity : Activity() {
     @Volatile private var bloquesCapturados = 0
     @Volatile private var bloquesDescartados = 0
     @Volatile private var bloquesProcesados = 0
+    @Volatile private var bloquesSilencio = 0
     @Volatile private var caracteresTexto = 0
 
     // ---- carpeta de archivos: externa (visible por USB) si existe ----
@@ -121,8 +128,10 @@ class MainActivity : Activity() {
         stats = findViewById(R.id.stats)
         transcripcion = findViewById(R.id.transcripcion)
         registroTexto = findViewById(R.id.registroTexto)
+        archivosTexto = findViewById(R.id.archivosTexto)
         scrollTranscripcion = findViewById(R.id.scrollTranscripcion)
         scrollRegistro = findViewById(R.id.scrollRegistro)
+        scrollArchivos = findViewById(R.id.scrollArchivos)
         nivelBarra = findViewById(R.id.nivelBarra)
         botonModelo = findViewById(R.id.botonModelo)
         botonIdioma = findViewById(R.id.botonIdioma)
@@ -133,8 +142,6 @@ class MainActivity : Activity() {
         pestanaTexto = findViewById(R.id.pestanaTexto)
         pestanaRegistro = findViewById(R.id.pestanaRegistro)
         pestanaArchivos = findViewById(R.id.pestanaArchivos)
-        scrollArchivos = findViewById(R.id.scrollArchivos)
-        archivosTexto = findViewById(R.id.archivosTexto)
 
         // Carpeta de datos: la externa de la app es la misma que la
         // interna para Android (misma "dueña", sin permisos extra),
@@ -149,7 +156,7 @@ class MainActivity : Activity() {
         }
 
         // ===== diagnóstico de arranque: saber QUÉ y DÓNDE desde el segundo 0
-        log("I", "APP", "=== Subtilingus 0.4 (modo depuración) ===")
+        log("I", "APP", "=== Subtilingus 0.5 (modo depuración) ===")
         log("I", "APP", "Móvil: " + Build.MANUFACTURER + " " + Build.MODEL +
                 " · Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")")
         log("I", "APP", "Carpeta de archivos: " + carpeta.absolutePath)
@@ -441,6 +448,7 @@ class MainActivity : Activity() {
         bloquesCapturados = 0
         bloquesDescartados = 0
         bloquesProcesados = 0
+        bloquesSilencio = 0
         caracteresTexto = 0
         botonTranscribir.text = "Detener"
         cola.clear()
@@ -468,8 +476,7 @@ class MainActivity : Activity() {
     }
 
     // El "productor": lee el micrófono y suelta bloques de 4 segundos.
-    // NOVEDAD: nada de this-bucle-se-muere-en-silencio. Cada rama
-    // problemática deja constancia en el Registro.
+    // Nada de morir en silencio: cada rama problemática deja rastro.
     private fun bucleAudio(grabador: AudioRecord) {
         val bloque = ShortArray(1600)
         val acumulado = ShortArray(MUESTRAS_POR_BLOQUE)
@@ -479,8 +486,6 @@ class MainActivity : Activity() {
         while (escuchando) {
             val leidas = grabador.read(bloque, 0, bloque.size)
             if (leidas < 0) {
-                // La Fase 1 hacía "break" sin decir NADA: este era el
-                // punto de fallo invisible más probable.
                 // OJO: aquí solo constantes que existen en la API 34.
                 // ERROR_NO_INIT (-3) no llegó hasta la API 35: usarla
                 // rompía la compilación en Actions. Los códigos raros
@@ -516,15 +521,34 @@ class MainActivity : Activity() {
                 n += copiable
             }
             if (n >= acumulado.size) {
-                while (!cola.offerLast(acumulado.copyOf())) {
-                    // Cola llena = Whisper no da abasto: soltamos el
-                    // bloque más viejo y lo contamos.
-                    cola.pollFirst()
-                    bloquesDescartados++
-                    log("W", "COLA", "Whisper va lento: bloque descartado (total " +
-                            bloquesDescartados + ")")
+                // ¿Merece la pena enviarlo? Si el bloque es silencio
+                // casi total, NO se lo damos a Whisper: ahorramos
+                // batería y evitamos que invente frases fantasma.
+                var suma2 = 0.0
+                for (s in acumulado) {
+                    val v = s.toDouble()
+                    suma2 += v * v
                 }
-                bloquesCapturados++
+                val rmsBloque = sqrt(suma2 / acumulado.size)
+                val dbBloque = if (rmsBloque <= 0.0) -99.0
+                        else 20.0 * log10(rmsBloque / 32768.0)
+                if (dbBloque < UMBRAL_SILENCIO_DB) {
+                    bloquesSilencio++
+                    val dbTxt = if (dbBloque <= -90.0) "-inf"
+                            else String.format(Locale.US, "%.0f", dbBloque)
+                    log("I", "MIC", "Bloque silencioso (" + dbTxt +
+                            " dB): no se envía a Whisper (total " + bloquesSilencio + ")")
+                } else {
+                    while (!cola.offerLast(acumulado.copyOf())) {
+                        // Cola llena = Whisper no da abasto: soltamos el
+                        // bloque más viejo y lo contamos.
+                        cola.pollFirst()
+                        bloquesDescartados++
+                        log("W", "COLA", "Whisper va lento: bloque descartado (total " +
+                                bloquesDescartados + ")")
+                    }
+                    bloquesCapturados++
+                }
                 n = 0
             }
 
@@ -549,6 +573,7 @@ class MainActivity : Activity() {
         val dbTexto = if (db <= -90.0) "-inf" else String.format(Locale.US, "%.0f", db)
         stats.text = "mic " + dbTexto + " dB · trozos " + trozosLeidos +
                 " · bloques " + bloquesCapturados +
+                " · silencio " + bloquesSilencio +
                 " · descartados " + bloquesDescartados +
                 " · procesados " + bloquesProcesados +
                 " · texto " + caracteresTexto + " car."
@@ -613,11 +638,12 @@ class MainActivity : Activity() {
         grabador = null
         estado.text = "En pausa. La transcripción queda guardada en el móvil."
         log("I", "APP", "Transcripción detenida. Resumen: trozos " + trozosLeidos +
-                ", bloques " + bloquesCapturados + ", descartados " + bloquesDescartados +
+                ", bloques " + bloquesCapturados + ", silencio " + bloquesSilencio +
+                ", descartados " + bloquesDescartados +
                 ", procesados " + bloquesProcesados + ", texto " + caracteresTexto + " car.")
     }
 
-    // ============ COMPARTIR Y LIMPIAR ============
+    // ============ COMPARTIR, LIMPIAR Y BORRAR ============
 
     // Comparte lo que muestre la pestaña ACTIVA (texto, registro o
     // el listado de archivos)
@@ -660,7 +686,10 @@ class MainActivity : Activity() {
         startActivity(Intent.createChooser(intento, titulo))
     }
 
-    // Limpia lo que muestre la pestaña ACTIVA (texto o registro)
+    // En Texto: borra la transcripción. En Registro: vacía el
+    // registro. En Archivos: ofrece borrar de verdad (¡con
+    // confirmación! borrar el modelo son 77 MB que habrá que
+    // volver a descargar).
     private fun limpiarActivo() {
         if (pestanaActiva == "registro") {
             synchronized(entradasRegistro) {
@@ -671,10 +700,35 @@ class MainActivity : Activity() {
             log("I", "APP", "Registro limpiado a mano")
             Toast.makeText(this, "Registro vaciado", Toast.LENGTH_SHORT).show()
         } else if (pestanaActiva == "archivos") {
-            // En la pestaña Archivos no tiene sentido "limpiar":
-            // solo se mira, no se borra nada desde aquí.
-            refrescarArchivos()
-            Toast.makeText(this, "Listado actualizado", Toast.LENGTH_SHORT).show()
+            val opciones = arrayOf(
+                "Borrar transcripcion.txt",
+                "Borrar el modelo (77 MB)"
+            )
+            AlertDialog.Builder(this)
+                .setTitle("¿Qué quieres borrar?")
+                .setItems(opciones) { _, cual ->
+                    if (cual == 0) {
+                        synchronized(archivoTranscripcion) { archivoTranscripcion.delete() }
+                        transcripcion.text = ""
+                        log("I", "ARCH", "transcripcion.txt borrado")
+                        Toast.makeText(this, "Transcripción borrada", Toast.LENGTH_SHORT).show()
+                    } else {
+                        archivoModelo.delete()
+                        if (ctx != 0L) {
+                            log("W", "MODELO", "Archivo del modelo borrado, pero sigue cargado " +
+                                    "en RAM: funcionará hasta que cierres la app")
+                            Toast.makeText(this,
+                                "Modelo borrado (en RAM hasta reiniciar la app)",
+                                Toast.LENGTH_LONG).show()
+                        } else {
+                            log("I", "MODELO", "Archivo del modelo borrado")
+                            Toast.makeText(this, "Modelo borrado", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    refrescarArchivos()
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
         } else {
             transcripcion.text = ""
             synchronized(archivoTranscripcion) {
