@@ -28,10 +28,10 @@ class WhisperBridge {
     // Whisper ha oído en el idioma indicado ("en", "es", ...).
     external fun transcribeSamples(ctx: Long, samples: FloatArray, lang: String): String
 
-    // NOVEDAD (depuración): devuelve el resumen de la ÚLTIMA operación
-    // hecha en C (qué pasó al cargar el modelo, código de retorno de la
-    // transcripción, segmentos encontrados, CPU usada...). Es el modo
-    // más simple de que el mundo C "explique" lo que hace sin logcat.
+    // Devuelve el resumen de la ÚLTIMA operación hecha en C (qué pasó
+    // al cargar el modelo, código de retorno de la transcripción,
+    // segmentos encontrados, CPU usada...). Es el modo más simple de
+    // que el mundo C "explique" lo que hace sin logcat.
     external fun estadoNativo(): String
 
     // Libera la memoria del modelo (higiene, como cerrar una conexión).
