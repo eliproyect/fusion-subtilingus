@@ -1,7 +1,7 @@
-// Módulo 'app': la configuración de NUESTRA aplicación.
-// namespace = paquete base de las clases Kotlin
-// applicationId = identidad única de la app en el sistema (cambiarlo
-//                 después implica desinstalar la app anterior)
+// Módulo 'app'. Novedad de la Fase 1: el bloque externalNativeBuild,
+// que le dice a Gradle "hay código C/C++ en jni/, compílalo con el NDK
+// usando CMake". El NDK lo instala el workflow automáticamente porque
+// detecta archivos bajo jni/.
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -27,10 +27,16 @@ android {
 
     defaultConfig {
         applicationId 'com.elisotopo.subtilingus'
-        minSdk 23          // Android 6.0: cubre móviles viejos sin esfuerzo
+        minSdk 23
         targetSdk 34
-        versionCode 1
-        versionName "v1.0"
+        versionCode 2
+        versionName "v2.0"
+
+        ndk {
+            // Solo CPUs ARM de 64 bits (tu Redmi y casi todos los móviles
+            // modernos): compila el doble de rápido y el APK es más pequeño.
+            abiFilters 'arm64-v8a'
+        }
     }
 
     buildTypes {
@@ -46,5 +52,12 @@ android {
 
     kotlinOptions {
         jvmTarget = '17'
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'src/main/jni/CMakeLists.txt'
+            version '3.22.1'
+        }
     }
 }
