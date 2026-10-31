@@ -102,7 +102,6 @@ Java_com_elisotopo_subtilingus_WhisperBridge_transcribeSamples(JNIEnv *env, jobj
     params.no_timestamps = true;
     // NUEVO v0.5: ignorar tokens "no voz" (suspiros, música, ruido):
     // menos frases fantasma cuando hay silencio o fondo.
-    params.suppress_non_speech_tokens = true;
     params.language = NULL;
     if (lang != NULL) {
         const char *idioma = (*env)->GetStringUTFChars(env, lang, NULL);
