@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fase 1: la pantalla es ahora "una sola columna": estado arriba,
-     botones, y el texto transcrito ocupando el resto (weight=1). -->
+<!-- Fase 1.1: la pantalla gana dos cosas de depuración:
+     · una línea de estadísticas (stats) + barra de nivel del micro
+     · dos pestañas (Texto / Registro) que alternan dos ScrollView.
+     La pestaña activa se marca poniendo la otra a media opacidad
+     (se hace desde Kotlin con setAlpha). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -12,7 +15,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/app_name"
-        android:textSize="24sp"
+        android:textSize="22sp"
         android:textStyle="bold" />
 
     <TextView
@@ -22,11 +25,29 @@
         android:textSize="12sp"
         android:layout_marginTop="4dp" />
 
+    <TextView
+        android:id="@+id/stats"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:layout_marginTop="4dp" />
+
+    <!-- Medidor de nivel del micrófono: si no se mueve al hablar,
+         el problema es la captura de audio, no Whisper -->
+    <ProgressBar
+        android:id="@+id/nivelBarra"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="10dp"
+        android:layout_marginTop="6dp"
+        android:max="100"
+        android:progress="0" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="12dp">
+        android:layout_marginTop="10dp">
 
         <Button
             android:id="@+id/botonModelo"
@@ -51,12 +72,37 @@
         android:layout_marginTop="8dp"
         android:text="Transcribir" />
 
+    <!-- Las dos pestañas -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp">
+
+        <Button
+            android:id="@+id/pestanaTexto"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="13sp"
+            android:text="Texto" />
+
+        <Button
+            android:id="@+id/pestanaRegistro"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:textSize="13sp"
+            android:text="Registro" />
+    </LinearLayout>
+
     <ScrollView
         android:id="@+id/scrollTranscripcion"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="12dp">
+        android:layout_marginTop="8dp">
 
         <TextView
             android:id="@+id/transcripcion"
@@ -64,6 +110,24 @@
             android:layout_height="wrap_content"
             android:textSize="16sp"
             android:text="Aquí aparecerá lo que Whisper oiga..." />
+    </ScrollView>
+
+    <ScrollView
+        android:id="@+id/scrollRegistro"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/registroTexto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textSize="11sp"
+            android:textIsSelectable="true"
+            android:text="" />
     </ScrollView>
 
     <LinearLayout
@@ -77,7 +141,17 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:textSize="12sp"
             android:text="Compartir" />
+
+        <Button
+            android:id="@+id/botonCompartirLog"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:textSize="12sp"
+            android:text="Compartir log" />
 
         <Button
             android:id="@+id/botonLimpiar"
@@ -85,6 +159,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
+            android:textSize="12sp"
             android:text="Limpiar" />
     </LinearLayout>
 </LinearLayout>
