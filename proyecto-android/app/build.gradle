@@ -1,6 +1,6 @@
-// Módulo 'app'. La Fase 1.1 solo cambia la versión (versionCode 3):
-// así Android sabe que hay una APK nueva y actualiza la instalada
-// sin desinstalar nada (y sin perder el modelo descargado).
+// Módulo 'app'. La v0.5 sube versionCode a 5: Android sabe que hay
+// una APK nueva y actualiza la instalada sin desinstalar nada (y sin
+// perder el modelo ya descargado).
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -29,7 +29,7 @@ android {
         minSdk 23
         targetSdk 34
         versionCode 4
-        versionName "v4.0"
+        versionName "v5.0"
 
         ndk {
             // Solo CPUs ARM de 64 bits (tu Redmi y casi todos los móviles
