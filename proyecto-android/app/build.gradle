@@ -1,0 +1,50 @@
+// Módulo 'app': la configuración de NUESTRA aplicación.
+// namespace = paquete base de las clases Kotlin
+// applicationId = identidad única de la app en el sistema (cambiarlo
+//                 después implica desinstalar la app anterior)
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    signingConfigs {
+        debug {
+            storeFile file("../apk-build/debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    namespace 'com.elisotopo.subtilingus'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.elisotopo.subtilingus'
+        minSdk 23          // Android 6.0: cubre móviles viejos sin esfuerzo
+        targetSdk 34
+        versionCode 1
+        versionName "v1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
