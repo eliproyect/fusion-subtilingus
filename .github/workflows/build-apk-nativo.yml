@@ -67,6 +67,11 @@ jobs:
             yes | sdkmanager --licenses > /dev/null || true
             sdkmanager "platforms;android-34" "build-tools;34.0.0"
           fi
+      - name: Instalar NDK (el proyecto usa jni/ o externalNativeBuild)
+        uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: r26b
       - name: Generar keystore debug si no existe
         working-directory: proyecto-android
         run: |
