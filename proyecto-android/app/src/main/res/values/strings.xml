@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Los textos viven aquí (no "quemados" en el código): es la
-     costumbre de Android, y el día que traduzcas la app al inglés
-     basta con añadir values-en/strings.xml -->
 <resources>
     <string name="app_name">Subtilingus</string>
 </resources>
