@@ -1,6 +1,4 @@
-// Raíz del proyecto: aquí se fijan las versiones de las herramientas
-// (el "mecano" con el que se construye la app). Todos los módulos
-// heredan estas versiones.
+// Raíz del proyecto: versiones de las herramientas (el "mecano").
 plugins {
     id 'com.android.application' version '8.5.0' apply false
     id 'org.jetbrains.kotlin.android' version '1.9.24' apply false
