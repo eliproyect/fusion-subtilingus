@@ -6,9 +6,9 @@
 // AQUÍ la función con este nombre tan largo, que codifica paquete
 // + clase + método. Es el equivalente C de un @Override.
 //
-// NOVEDAD (depuración): g_estado es un "cuaderno" donde cada
-// función anota lo que acaba de pasar. Kotlin lo lee con
-// estadoNativo() y lo enseña en la pestaña Registro.
+// g_estado es un "cuaderno" donde cada función anota lo que acaba
+// de pasar. Kotlin lo lee con estadoNativo() y lo enseña en la
+// pestaña Registro.
 // ============================================================
 
 #include <jni.h>
@@ -91,7 +91,7 @@ Java_com_elisotopo_subtilingus_WhisperBridge_transcribeSamples(JNIEnv *env, jobj
     }
 
     // 2) Configuramos Whisper: greedy = decodificación rápida y
-    //    determinista; sin timestamps, sin logs, idioma elegido.
+    //    determinista; sin timestamps, idioma elegido.
     struct whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     params.n_threads = 4;             // tu Redmi: 4 hilos van muy finos
     params.translate = false;         // transcribir, no traducir (¿todavía?)
@@ -100,6 +100,9 @@ Java_com_elisotopo_subtilingus_WhisperBridge_transcribeSamples(JNIEnv *env, jobj
     params.print_realtime = false;
     params.print_timestamps = false;
     params.no_timestamps = true;
+    // NUEVO v0.5: ignorar tokens "no voz" (suspiros, música, ruido):
+    // menos frases fantasma cuando hay silencio o fondo.
+    params.suppress_non_speech_tokens = true;
     params.language = NULL;
     if (lang != NULL) {
         const char *idioma = (*env)->GetStringUTFChars(env, lang, NULL);
@@ -109,7 +112,7 @@ Java_com_elisotopo_subtilingus_WhisperBridge_transcribeSamples(JNIEnv *env, jobj
     }
 
     // 3) La magia: decenas de capas de red neuronal en este bloque.
-    //    Clock medimos el tiempo de CPU invertido: si crece mucho,
+    //    Clock mide el tiempo de CPU invertido: si crece mucho,
     //    el móvil no da abasto y la cola descartará bloques.
     clock_t t0 = clock();
     int rc = whisper_full(ctx, params, datos, (int)n);
