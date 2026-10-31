@@ -29,7 +29,7 @@ android {
         minSdk 23
         targetSdk 34
         versionCode 4
-        versionName "v5.0"
+        versionName "v6.0"
 
         ndk {
             // Solo CPUs ARM de 64 bits (tu Redmi y casi todos los móviles
