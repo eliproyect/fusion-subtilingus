@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- El manifest es el DNI de la app: cómo se llama, qué permisos
-     necesita y qué pantallas (activities) tiene. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permiso "peligroso": hay que declararlo AQUÍ y además pedirlo
-         al usuario en tiempo de ejecución (lo hace MainActivity.kt). -->
+    <!-- Fase 1 necesita dos permisos:
+         - RECORD_AUDIO: el micrófono (se pide además por diálogo)
+         - INTERNET: para descargar el modelo de Whisper la 1ª vez -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:icon="@mipmap/ic_launcher"
