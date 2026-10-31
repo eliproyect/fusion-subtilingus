@@ -1,56 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- El "esqueleto" de la pantalla: qué piezas hay y cómo se colocan.
-     ScrollView = si la pantalla es pequeña, se puede hacer scroll. -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Fase 1: la pantalla es ahora "una sola columna": estado arriba,
+     botones, y el texto transcrito ocupando el resto (weight=1). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/titulo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/app_name"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/estado"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:layout_marginTop="4dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp"
-        android:gravity="center_horizontal">
-
-        <TextView
-            android:id="@+id/titulo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:layout_marginTop="32dp" />
-
-        <TextView
-            android:id="@+id/subtitulo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Fase 0 · El proyecto funciona"
-            android:textSize="14sp"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="24dp" />
-
-        <TextView
-            android:id="@+id/infoDispositivo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:padding="12dp" />
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp">
 
         <Button
-            android:id="@+id/botonMicro"
-            android:layout_width="match_parent"
+            android:id="@+id/botonModelo"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Probar micrófono" />
+            android:layout_weight="1"
+            android:text="Modelo" />
+
+        <Button
+            android:id="@+id/botonIdioma"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="EN" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/botonTranscribir"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Transcribir" />
+
+    <ScrollView
+        android:id="@+id/scrollTranscripcion"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="12dp">
 
         <TextView
-            android:id="@+id/textoNivel"
+            android:id="@+id/transcripcion"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:textSize="16sp"
-            android:typeface="monospace"
-            android:text="Pulsa el botón para medir el nivel del micrófono." />
+            android:text="Aquí aparecerá lo que Whisper oiga..." />
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/botonCompartir"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Compartir" />
+
+        <Button
+            android:id="@+id/botonLimpiar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Limpiar" />
     </LinearLayout>
-</ScrollView>
+</LinearLayout>
