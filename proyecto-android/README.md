@@ -12,10 +12,14 @@ whisper.cpp se compila con el NDK (se descarga en build con CMake
 FetchContent) y el modelo tiny (75 MB) se descarga la primera vez que
 se abre la app. Todo offline: el audio nunca sale del móvil.
 
-**Fase 1.1 (actual)** — Modo depuración: no se transcribía y no había forma
+**Fase 1.1 (actual, v0.4)** — Modo depuración: no se transcribía y no había forma
 de saber por qué. Nueva pestaña **Registro** (hora + nivel + etiqueta de
 cada paso, también en `registro.log`), medidor de nivel del micrófono en dB,
 contadores en vivo (trozos, bloques, descartados, procesados), resumen del
 mundo C tras cada bloque (`estadoNativo()`: rc, segmentos, CPU) y archivos
-en la carpeta externa de la app, visible desde un PC por USB. El modelo
+en la carpeta externa de la app. Como Android 11+ no deja a los gestores
+de archivos entrar en `Android/data/`, la pestaña **Archivos** lista la
+carpeta (nombres, tamaños, fechas): es nuestro mini-explorador. El modelo
 descargado con la Fase 1 se migra automáticamente: no hay que re-descargarlo.
+Fix v0.4: `AudioRecord.ERROR_NO_INIT` no existe en la API 34 (llegó en la
+35) y rompía la compilación.
