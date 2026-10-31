@@ -1,7 +1,7 @@
 package com.elisotopo.subtilingus
 
 // ============================================================
-// Subtilingus · Fase 1.1 — Modo depuración
+// Subtilingus · Fase 1.1 — Modo depuración (v0.4)
 // ============================================================
 // Lo aprendido en la Fase 1: cuando algo falla y no hay registros,
 // estamos a ciegas. Esta versión añade:
@@ -82,6 +82,9 @@ class MainActivity : Activity() {
     private lateinit var botonLimpiar: Button
     private lateinit var pestanaTexto: Button
     private lateinit var pestanaRegistro: Button
+    private lateinit var pestanaArchivos: Button
+    private lateinit var scrollArchivos: ScrollView
+    private lateinit var archivosTexto: TextView
 
     private val bridge = WhisperBridge()
 
@@ -129,6 +132,9 @@ class MainActivity : Activity() {
         botonLimpiar = findViewById(R.id.botonLimpiar)
         pestanaTexto = findViewById(R.id.pestanaTexto)
         pestanaRegistro = findViewById(R.id.pestanaRegistro)
+        pestanaArchivos = findViewById(R.id.pestanaArchivos)
+        scrollArchivos = findViewById(R.id.scrollArchivos)
+        archivosTexto = findViewById(R.id.archivosTexto)
 
         // Carpeta de datos: la externa de la app es la misma que la
         // interna para Android (misma "dueña", sin permisos extra),
@@ -143,7 +149,7 @@ class MainActivity : Activity() {
         }
 
         // ===== diagnóstico de arranque: saber QUÉ y DÓNDE desde el segundo 0
-        log("I", "APP", "=== Subtilingus 0.3 (modo depuración) ===")
+        log("I", "APP", "=== Subtilingus 0.4 (modo depuración) ===")
         log("I", "APP", "Móvil: " + Build.MANUFACTURER + " " + Build.MODEL +
                 " · Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")")
         log("I", "APP", "Carpeta de archivos: " + carpeta.absolutePath)
@@ -165,6 +171,7 @@ class MainActivity : Activity() {
 
         pestanaTexto.setOnClickListener { mostrarPestana("texto") }
         pestanaRegistro.setOnClickListener { mostrarPestana("registro") }
+        pestanaArchivos.setOnClickListener { mostrarPestana("archivos") }
         mostrarPestana("texto")
 
         botonModelo.setOnClickListener { prepararModelo() }
@@ -242,15 +249,55 @@ class MainActivity : Activity() {
         return String.format(Locale.US, "%.1f", bytes / 1_000_000.0)
     }
 
-    // Cambia entre la vista de transcripción y la de registro.
+    // Cambia entre la vista de transcripción, registro y archivos.
     // alpha 1.0 = pestaña activa, 0.45 = atenuada.
     private fun mostrarPestana(nombre: String) {
         pestanaActiva = nombre
-        val verTexto = nombre == "texto"
-        scrollTranscripcion.visibility = if (verTexto) View.VISIBLE else View.GONE
-        scrollRegistro.visibility = if (verTexto) View.GONE else View.VISIBLE
-        pestanaTexto.alpha = if (verTexto) 1.0f else 0.45f
-        pestanaRegistro.alpha = if (verTexto) 0.45f else 1.0f
+        scrollTranscripcion.visibility = if (nombre == "texto") View.VISIBLE else View.GONE
+        scrollRegistro.visibility = if (nombre == "registro") View.VISIBLE else View.GONE
+        scrollArchivos.visibility = if (nombre == "archivos") View.VISIBLE else View.GONE
+        pestanaTexto.alpha = if (nombre == "texto") 1.0f else 0.45f
+        pestanaRegistro.alpha = if (nombre == "registro") 1.0f else 0.45f
+        pestanaArchivos.alpha = if (nombre == "archivos") 1.0f else 0.45f
+        if (nombre == "archivos") refrescarArchivos()
+    }
+
+    // Nuestro mini-explorador de archivos. Android 11+ NO deja entrar
+    // a los gestores de archivos en Android/data/<paquete>/ (protección
+    // de datos de las apps), pero la propia app SÍ puede mirar su
+    // carpeta: así confirmas con tus ojos dónde están el modelo, la
+    // transcripción y el registro, y cuánto ocupan.
+    private fun refrescarArchivos() {
+        val formato = SimpleDateFormat("dd/MM HH:mm", Locale.US)
+        val lineas = StringBuilder()
+        lineas.append("Carpeta de la app:\n")
+        lineas.append(carpeta.absolutePath).append("\n\n")
+        val lista = carpeta.listFiles()?.sortedBy { it.name } ?: emptyList()
+        if (lista.isEmpty()) {
+            lineas.append("(carpeta vacía)")
+        } else {
+            var total = 0L
+            for (f in lista) {
+                total += f.length()
+                lineas.append(f.name)
+                        .append("   ").append(tamanoLegible(f.length()))
+                        .append("   ").append(formato.format(Date(f.lastModified())))
+                        .append("\n")
+            }
+            lineas.append("\nTotal: ").append(tamanoLegible(total))
+                    .append(" en ").append(lista.size).append(" archivos")
+        }
+        archivosTexto.text = lineas.toString()
+        log("I", "ARCH", "Listados " + lista.size + " archivos de la carpeta de la app")
+    }
+
+    // 1234567 B -> "1.2 MB": los humanos leemos mejor así que en bytes
+    private fun tamanoLegible(bytes: Long): String {
+        return when {
+            bytes >= 1_000_000L -> mb(bytes) + " MB"
+            bytes >= 1_000L -> String.format(Locale.US, "%.1f", bytes / 1000.0) + " KB"
+            else -> bytes.toString() + " B"
+        }
     }
 
     // ================= MODELO =================
@@ -434,14 +481,17 @@ class MainActivity : Activity() {
             if (leidas < 0) {
                 // La Fase 1 hacía "break" sin decir NADA: este era el
                 // punto de fallo invisible más probable.
+                // OJO: aquí solo constantes que existen en la API 34.
+                // ERROR_NO_INIT (-3) no llegó hasta la API 35: usarla
+                // rompía la compilación en Actions. Los códigos raros
+                // se describen "a mano".
                 val motivo = when (leidas) {
                     AudioRecord.ERROR_BAD_VALUE ->
                         "ERROR_BAD_VALUE (argumentos inválidos)"
                     AudioRecord.ERROR_INVALID_OPERATION ->
                         "ERROR_INVALID_OPERATION (lectura en estado no válido)"
-                    AudioRecord.ERROR_NO_INIT ->
-                        "ERROR_NO_INIT (el grabador no se inicializó)"
-                    else -> "código desconocido " + leidas
+                    else ->
+                        "código " + leidas + " (si es -3: NO_INIT; si es -6: DEAD_OBJECT)"
                 }
                 log("E", "MIC", "read() falló: " + motivo +
                         ". El hilo de audio se detiene. Trozos leídos hasta aquí: " + trozosLeidos)
@@ -569,10 +619,15 @@ class MainActivity : Activity() {
 
     // ============ COMPARTIR Y LIMPIAR ============
 
-    // Comparte lo que muestre la pestaña ACTIVA (texto o registro)
+    // Comparte lo que muestre la pestaña ACTIVA (texto, registro o
+    // el listado de archivos)
     private fun compartirActivo() {
         if (pestanaActiva == "registro") {
             compartirRegistro()
+            return
+        }
+        if (pestanaActiva == "archivos") {
+            mandarPorIntent(archivosTexto.text.toString(), "Listado de archivos")
             return
         }
         val texto = synchronized(archivoTranscripcion) {
@@ -615,6 +670,11 @@ class MainActivity : Activity() {
             registroTexto.text = ""
             log("I", "APP", "Registro limpiado a mano")
             Toast.makeText(this, "Registro vaciado", Toast.LENGTH_SHORT).show()
+        } else if (pestanaActiva == "archivos") {
+            // En la pestaña Archivos no tiene sentido "limpiar":
+            // solo se mira, no se borra nada desde aquí.
+            refrescarArchivos()
+            Toast.makeText(this, "Listado actualizado", Toast.LENGTH_SHORT).show()
         } else {
             transcripcion.text = ""
             synchronized(archivoTranscripcion) {
