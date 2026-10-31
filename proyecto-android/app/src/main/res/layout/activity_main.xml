@@ -72,7 +72,7 @@
         android:layout_marginTop="8dp"
         android:text="Transcribir" />
 
-    <!-- Las dos pestañas -->
+    <!-- Las tres pestañas: Texto, Registro y Archivos -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -84,7 +84,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:text="Texto" />
 
         <Button
@@ -93,8 +93,17 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:text="Registro" />
+
+        <Button
+            android:id="@+id/pestanaArchivos"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:textSize="12sp"
+            android:text="Archivos" />
     </LinearLayout>
 
     <ScrollView
@@ -126,6 +135,27 @@
             android:layout_height="wrap_content"
             android:fontFamily="monospace"
             android:textSize="11sp"
+            android:textIsSelectable="true"
+            android:text="" />
+    </ScrollView>
+
+    <!-- El mini-explorador: como Android 11+ no deja a los gestores
+         de archivos entrar en Android/data/<paquete>/, la propia app
+         nos enseña qué hay en su carpeta y cuánto ocupa -->
+    <ScrollView
+        android:id="@+id/scrollArchivos"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/archivosTexto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textSize="12sp"
             android:textIsSelectable="true"
             android:text="" />
     </ScrollView>
