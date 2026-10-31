@@ -1,7 +1,7 @@
 package com.elisotopo.subtilingus
 
 // ============================================================
-// Subtilingus · Fase 1.1 — Modo depuración (v0.5)
+// Subtilingus · Fase 1.1 — Modo depuración (v0.6)
 // ============================================================
 // Lo aprendido en la Fase 1: cuando algo falla y no hay registros,
 // estamos a ciegas. Esta versión añade:
@@ -156,7 +156,7 @@ class MainActivity : Activity() {
         }
 
         // ===== diagnóstico de arranque: saber QUÉ y DÓNDE desde el segundo 0
-        log("I", "APP", "=== Subtilingus 0.5 (modo depuración) ===")
+        log("I", "APP", "=== Subtilingus 0.6 (modo depuración) ===")
         log("I", "APP", "Móvil: " + Build.MANUFACTURER + " " + Build.MODEL +
                 " · Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")")
         log("I", "APP", "Carpeta de archivos: " + carpeta.absolutePath)
