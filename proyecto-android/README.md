@@ -11,3 +11,11 @@ idioma conmutable EN/ES, texto guardado en el móvil y botón de compartir.
 whisper.cpp se compila con el NDK (se descarga en build con CMake
 FetchContent) y el modelo tiny (75 MB) se descarga la primera vez que
 se abre la app. Todo offline: el audio nunca sale del móvil.
+
+**Fase 1.1 (actual)** — Modo depuración: no se transcribía y no había forma
+de saber por qué. Nueva pestaña **Registro** (hora + nivel + etiqueta de
+cada paso, también en `registro.log`), medidor de nivel del micrófono en dB,
+contadores en vivo (trozos, bloques, descartados, procesados), resumen del
+mundo C tras cada bloque (`estadoNativo()`: rc, segmentos, CPU) y archivos
+en la carpeta externa de la app, visible desde un PC por USB. El modelo
+descargado con la Fase 1 se migra automáticamente: no hay que re-descargarlo.
