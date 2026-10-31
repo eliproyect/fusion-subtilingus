@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fase 1.1: la pantalla gana dos cosas de depuración:
+<!-- Fase 1.1: la pantalla gana cosas de depuración:
      · una línea de estadísticas (stats) + barra de nivel del micro
-     · dos pestañas (Texto / Registro) que alternan dos ScrollView.
-     La pestaña activa se marca poniendo la otra a media opacidad
-     (se hace desde Kotlin con setAlpha). -->
+     · tres pestañas (Texto / Registro / Archivos) que alternan tres
+       ScrollView. La pestaña activa se marca poniendo las otras a
+       media opacidad (se hace desde Kotlin con setAlpha). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
