@@ -28,8 +28,8 @@ android {
         applicationId 'com.elisotopo.subtilingus'
         minSdk 23
         targetSdk 34
-        versionCode 3
-        versionName "v3.0"
+        versionCode 4
+        versionName "v4.0"
 
         ndk {
             // Solo CPUs ARM de 64 bits (tu Redmi y casi todos los móviles
