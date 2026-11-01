@@ -1,29 +1,31 @@
 # Subtilingus
 
-App personal para aprender idiomas escuchando contenido real: subtítulos
-en directo sobre cualquier audio + transcripción guardada, con capa de
-aprendizaje (diccionario, tarjetas) como objetivo final.
+App personal para aprender idiomas con audio real: subtítulos en directo
+sobre cualquier app (BBC, Spotify, YouTube…) o desde el micrófono (TV),
+con todo guardado y herramientas de estudio.
 
-**Fase 0** — Proyecto base: pantalla de diagnóstico + prueba de micrófono. ✅
+## v0.7 — "Fase 2"
 
-**Fase 1** — Whisper on-device: transcripción en directo por bloques de 4 s,
-idioma conmutable EN/ES, texto guardado en el móvil y botón de compartir.
-whisper.cpp se compila con el NDK (se descarga en build con CMake
-FetchContent) y el modelo tiny (75 MB) se descarga la primera vez que
-se abre la app. Todo offline: el audio nunca sale del móvil. ✅
+- **Servicio en segundo plano**: sigue transcribiendo mientras usas otras apps.
+- **Audio del móvil** (Android 10+, AudioPlaybackCapture) o **micrófono**.
+- **Subtítulos flotantes** (arrastrables, 3 tamaños) sobre cualquier app.
+- **Frases en vez de bloques de 4 s**: se corta por las pausas; borrador gris
+  mientras hablan y frase final al terminar.
+- **Más rápido**: modelos cuantizados (q5_1), `audio_ctx` adaptado a cada
+  frase, sin contexto previo, tiempos reales en pantalla.
+- **Modelos**: inglés (.en, más precisos) y multilingües; se eligen en Ajustes.
+- **Textos**: lista de sesiones con hora por frase; compartir, guardar como
+  .txt / .srt, borrar.
+- **Aprender**: toca una palabra → traducción, definición, ejemplos y
+  "Guardar" en Vocabulario (consulta online solo de esa palabra).
+- **Ajustes > Almacenamiento**: qué hay, dónde y cómo borrarlo.
+  Registro de diagnóstico en Ajustes > Ver registro.
 
-**Fase 1.1 (actual, v0.6)** — Modo depuración: pestaña **Registro** (hora +
-nivel + etiqueta de cada paso, también en `registro.log`), medidor de nivel
-del micrófono en dB, contadores en vivo, resumen del mundo C tras cada
-bloque (`estadoNativo()`: rc, segmentos, CPU) y pestaña **Archivos**:
-mini-explorador de la carpeta de la app, porque Android 11+ no deja entrar
-a los gestores de archivos en `Android/data/`. "Limpiar" en Archivos ofrece
-borrar de verdad la transcripción o el modelo (con confirmación).
+Carpeta de datos: `Android/data/com.elisotopo.subtilingus/files/`
+(`modelos/`, `textos/`, `vocabulario.tsv`, `registro.log`).
 
-Cambios de velocidad y calidad en v0.6:
-- **-O3 forzado en CMake**: la variante debug compilaba ggml sin optimizar
-  (-O0) y un bloque de 4 s tardaba 109 s de CPU; con -O3 baja a pocos
-  segundos (el hallazgo del Registro).
-- Los bloques de silencio (< -50 dB) no se envían a Whisper: menos frases
-  fantasma y menos batería.
-- `suppress_non_speech_tokens` en Whisper para ignorar ruido no vocal.
+## Pendiente / ideas
+- Traducción de los subtítulos en vivo EN→ES (ML Kit on-device).
+- Repaso del vocabulario (tarjetas, repetición espaciada).
+- Diccionario offline, más idiomas en la interfaz.
+- Variante de whisper.cpp con instrucciones ARMv8.2 (dotprod/fp16).
