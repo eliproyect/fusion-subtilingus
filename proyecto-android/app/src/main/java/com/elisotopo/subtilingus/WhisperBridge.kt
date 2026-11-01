@@ -1,39 +1,25 @@
 package com.elisotopo.subtilingus
 
-// ============================================================
-// El puente con la librería nativa (JNI)
-// ============================================================
-// "external fun" = "la implementación NO está en Kotlin: vive en C"
-// (jni/whisper-jni.c). Kotlin solo declara el contrato; el NDK
-// compila el C y el nombre largo de las funciones C
-// (Java_com_elisotopo_subtilingus_WhisperBridge_initContext) es
-// literalmente paquete + clase + método codificados.
-// ============================================================
-
+// El puente con la librería nativa (JNI): "external fun" = la
+// implementación vive en C (jni/whisper-jni.c).
 class WhisperBridge {
 
     companion object {
         init {
-            // Carga libwhisper_jni.so (lo compila el NDK en GitHub Actions)
             System.loadLibrary("whisper_jni")
         }
     }
 
-    // Carga el modelo (.bin) y devuelve un "manejador" (un número que
-    // en C es un puntero a memoria). 0 = fallo. Kotlin no mira dentro,
-    // solo lo guarda y lo devuelve en las llamadas siguientes.
+    // Carga el modelo (.bin). Devuelve un manejador (puntero en C). 0 = fallo.
     external fun initContext(modelPath: String): Long
 
-    // Recibe muestras float de -1.0 a 1.0 y devuelve el texto que
-    // Whisper ha oído en el idioma indicado ("en", "es", ...).
-    external fun transcribeSamples(ctx: Long, samples: FloatArray, lang: String): String
+    // muestras float -1..1 a 16 kHz -> texto en UTF-8 (bytes).
+    // idioma: "en", "es" o "auto". audioCtx: 0 = completo; si no, recorta
+    // el contexto del encoder (más rápido en fragmentos cortos).
+    external fun transcribir(ctx: Long, muestras: FloatArray, idioma: String, hilos: Int, audioCtx: Int): ByteArray
 
-    // Devuelve el resumen de la ÚLTIMA operación hecha en C (qué pasó
-    // al cargar el modelo, código de retorno de la transcripción,
-    // segmentos encontrados, CPU usada...). Es el modo más simple de
-    // que el mundo C "explique" lo que hace sin logcat.
+    // Resumen de la última operación hecha en C (para el Registro).
     external fun estadoNativo(): String
 
-    // Libera la memoria del modelo (higiene, como cerrar una conexión).
     external fun freeContext(ctx: Long)
 }
