@@ -1,6 +1,6 @@
-// Módulo 'app'. La v0.5 sube versionCode a 5: Android sabe que hay
-// una APK nueva y actualiza la instalada sin desinstalar nada (y sin
-// perder el modelo ya descargado).
+// Módulo 'app'. v0.7: minSdk 29 (Android 10) porque la captura del audio
+// interno del móvil (AudioPlaybackCapture) no existe antes. versionCode 5:
+// Android actualiza la APK instalada sin perder nada.
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -26,10 +26,10 @@ android {
 
     defaultConfig {
         applicationId 'com.elisotopo.subtilingus'
-        minSdk 23
+        minSdk 29
         targetSdk 34
-        versionCode 4
-        versionName "v6.0"
+        versionCode 7
+        versionName "v7.0"
 
         ndk {
             // Solo CPUs ARM de 64 bits (tu Redmi y casi todos los móviles
