@@ -1,26 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Fase 1 necesita dos permisos:
-         - RECORD_AUDIO: el micrófono (se pide además por diálogo)
-         - INTERNET: para descargar el modelo de Whisper la 1ª vez -->
+    <!-- Micrófono y captura del audio del móvil -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Descargar modelos y consultar el diccionario -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Servicio en primer plano (sigue escuchando con otras apps abiertas) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Subtítulos flotantes sobre otras apps -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
-        android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:allowBackup="true">
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@android:style/Theme.Material.NoActionBar"
+        android:allowBackup="false">
 
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".TranscriberService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection|microphone" />
     </application>
 </manifest>
