@@ -1,14 +1,17 @@
 // ============================================================
-// Subtilingus · Puente JNI con whisper.cpp
+// Subtilingus · Puente JNI con whisper.cpp (v0.7)
 // ============================================================
-// JNI = la forma en que Kotlin llama a funciones escritas en C.
-// Kotlin declara "external fun" (WhisperBridge.kt) y Android busca
-// AQUÍ la función con este nombre tan largo, que codifica paquete
-// + clase + método. Es el equivalente C de un @Override.
-//
-// g_estado es un "cuaderno" donde cada función anota lo que acaba
-// de pasar. Kotlin lo lee con estadoNativo() y lo enseña en la
-// pestaña Registro.
+// Cambios respecto a la v0.6:
+//  - transcribir() devuelve BYTES (UTF-8) y no un jstring: Whisper
+//    a veces corta un caracter de varios bytes (acentos, ñ) entre
+//    dos tokens, y NewStringUTF con UTF-8 invalido puede abortar la
+//    app en builds debug (CheckJNI). Kotlin decodifica con seguridad.
+//  - nuevos parametros: hilos y audio_ctx (recorta el trabajo del
+//    encoder para fragmentos cortos: la mayor ganancia de velocidad).
+//  - no_context: cada fragmento se transcribe independiente (evita
+//    bucles de texto repetido).
+//  - greedy.best_of = 1: menos trabajo si Whisper reintenta.
+//  - el tiempo se mide con reloj real (antes: CPU de todos los hilos).
 // ============================================================
 
 #include <jni.h>
@@ -19,11 +22,15 @@
 #include <time.h>
 #include "whisper.h"
 
-// Última palabra del mundo C. Solo ASCII: NewStringUTF es lo
-// bastante quisquilloso como para no arriesgarse con acentos.
 static char g_estado[512] = "nada ejecutado todavia";
 
-// Carga el modelo desde un archivo y devuelve el puntero al contexto
+static double ahora_s(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
+}
+
 JNIEXPORT jlong JNICALL
 Java_com_elisotopo_subtilingus_WhisperBridge_initContext(JNIEnv *env, jobject thiz, jstring modelPath)
 {
@@ -32,15 +39,11 @@ Java_com_elisotopo_subtilingus_WhisperBridge_initContext(JNIEnv *env, jobject th
         snprintf(g_estado, sizeof(g_estado), "init FALLO: ruta nula");
         return 0;
     }
-
     const char *ruta = (*env)->GetStringUTFChars(env, modelPath, NULL);
     if (ruta == NULL) {
         snprintf(g_estado, sizeof(g_estado), "init FALLO: sin memoria para la ruta");
         return 0;
     }
-
-    // Copiamos la ruta ANTES de soltarla: snprintf sobre un puntero
-    // ya liberado es usar memoria prestada (use-after-free).
     char copia[256];
     snprintf(copia, sizeof(copia), "%s", ruta);
 
@@ -59,7 +62,6 @@ Java_com_elisotopo_subtilingus_WhisperBridge_initContext(JNIEnv *env, jobject th
     return (jlong)(intptr_t)ctx;
 }
 
-// Libera el contexto (el modelo deja de ocupar memoria)
 JNIEXPORT void JNICALL
 Java_com_elisotopo_subtilingus_WhisperBridge_freeContext(JNIEnv *env, jobject thiz, jlong ctxPtr)
 {
@@ -70,91 +72,100 @@ Java_com_elisotopo_subtilingus_WhisperBridge_freeContext(JNIEnv *env, jobject th
     }
 }
 
-// El corazón: muestras de audio -> texto
-JNIEXPORT jstring JNICALL
-Java_com_elisotopo_subtilingus_WhisperBridge_transcribeSamples(JNIEnv *env, jobject thiz,
-        jlong ctxPtr, jfloatArray samples, jstring lang)
+// muestras (float -1..1, 16 kHz mono) -> texto UTF-8 como bytes
+JNIEXPORT jbyteArray JNICALL
+Java_com_elisotopo_subtilingus_WhisperBridge_transcribir(JNIEnv *env, jobject thiz,
+        jlong ctxPtr, jfloatArray samples, jstring lang, jint hilos, jint audioCtx)
 {
     (void) thiz;
     struct whisper_context *ctx = (struct whisper_context *)(intptr_t)ctxPtr;
     if (ctx == NULL || samples == NULL) {
         snprintf(g_estado, sizeof(g_estado), "transcribe FALLO: contexto o muestras nulos");
-        return (*env)->NewStringUTF(env, "");
+        return (*env)->NewByteArray(env, 0);
     }
 
-    // 1) Accedemos al array de floats de Kotlin desde C (sin copiarlo)
     const jsize n = (*env)->GetArrayLength(env, samples);
     jfloat *datos = (*env)->GetFloatArrayElements(env, samples, NULL);
     if (datos == NULL) {
         snprintf(g_estado, sizeof(g_estado), "transcribe FALLO: sin acceso al array de muestras");
-        return (*env)->NewStringUTF(env, "");
+        return (*env)->NewByteArray(env, 0);
     }
 
-    // 2) Configuramos Whisper: greedy = decodificación rápida y
-    //    determinista; sin timestamps, idioma elegido.
     struct whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
-    params.n_threads = 4;             // tu Redmi: 4 hilos van muy finos
-    params.translate = false;         // transcribir, no traducir (¿todavía?)
+    params.n_threads = hilos > 0 ? (int)hilos : 4;
+    params.translate = false;
     params.print_progress = false;
     params.print_special = false;
     params.print_realtime = false;
     params.print_timestamps = false;
     params.no_timestamps = true;
-    // NUEVO v0.5: ignorar tokens "no voz" (suspiros, música, ruido):
-    // menos frases fantasma cuando hay silencio o fondo.
-    params.language = NULL;
+    params.no_context = true;
+    params.single_segment = false;
+    params.suppress_blank = true;
+    params.greedy.best_of = 1;
+    params.audio_ctx = audioCtx > 0 ? (int)audioCtx : 0;
+
+    params.language = "en";
+    const char *idioma = NULL;
     if (lang != NULL) {
-        const char *idioma = (*env)->GetStringUTFChars(env, lang, NULL);
+        idioma = (*env)->GetStringUTFChars(env, lang, NULL);
         if (idioma != NULL) {
             params.language = idioma;
         }
     }
 
-    // 3) La magia: decenas de capas de red neuronal en este bloque.
-    //    Clock mide el tiempo de CPU invertido: si crece mucho,
-    //    el móvil no da abasto y la cola descartará bloques.
-    clock_t t0 = clock();
+    const double t0 = ahora_s();
     int rc = whisper_full(ctx, params, datos, (int)n);
-    double seg_cpu = (double)(clock() - t0) / (double)CLOCKS_PER_SEC;
+    const double seg = ahora_s() - t0;
 
-    if (lang != NULL && params.language != NULL) {
-        (*env)->ReleaseStringUTFChars(env, lang, params.language);
+    if (idioma != NULL) {
+        (*env)->ReleaseStringUTFChars(env, lang, idioma);
     }
     (*env)->ReleaseFloatArrayElements(env, samples, datos, JNI_ABORT);
 
-    // 4) Anotamos QUÉ pasó, no solo "salió vacío": rc (0 = bien),
-    //    segmentos y CPU. Esto es lo que verás en el Registro.
-    const int nSegmentos = whisper_full_n_segments(ctx);
+    const int nSegmentos = (rc == 0) ? whisper_full_n_segments(ctx) : 0;
     snprintf(g_estado, sizeof(g_estado),
-             "rc=%d, segmentos=%d, %.2f s CPU para %d muestras",
-             rc, nSegmentos, seg_cpu, (int)n);
+             "rc=%d, segmentos=%d, %.2f s reloj para %d muestras (audio_ctx=%d, hilos=%d)",
+             rc, nSegmentos, seg, (int)n, (int)audioCtx, (int)hilos);
 
-    if (rc != 0) {
-        return (*env)->NewStringUTF(env, "");
+    if (rc != 0 || nSegmentos <= 0) {
+        return (*env)->NewByteArray(env, 0);
     }
 
-    // 5) Whisper devuelve el texto en "segmentos": los unimos todos
     size_t total = 1;
     for (int i = 0; i < nSegmentos; i++) {
-        total += strlen(whisper_full_get_segment_text(ctx, i)) + 1;
+        const char *t = whisper_full_get_segment_text(ctx, i);
+        if (t != NULL) total += strlen(t) + 1;
     }
     char *buffer = (char *)malloc(total);
     if (buffer == NULL) {
-        return (*env)->NewStringUTF(env, "");
+        return (*env)->NewByteArray(env, 0);
     }
     buffer[0] = '\0';
     for (int i = 0; i < nSegmentos; i++) {
-        strcat(buffer, whisper_full_get_segment_text(ctx, i));
+        const char *t = whisper_full_get_segment_text(ctx, i);
+        if (t != NULL) strcat(buffer, t);
     }
-    jstring resultado = (*env)->NewStringUTF(env, buffer);
+    const size_t largo = strlen(buffer);
+    jbyteArray resultado = (*env)->NewByteArray(env, (jsize)largo);
+    if (resultado != NULL && largo > 0) {
+        (*env)->SetByteArrayRegion(env, resultado, 0, (jsize)largo, (const jbyte *)buffer);
+    }
     free(buffer);
     return resultado;
 }
 
-// El "cuaderno" del mundo C, para la pestaña Registro de Kotlin
+// El "cuaderno" del mundo C (solo ASCII para no arriesgar con NewStringUTF)
 JNIEXPORT jstring JNICALL
 Java_com_elisotopo_subtilingus_WhisperBridge_estadoNativo(JNIEnv *env, jobject thiz)
 {
     (void) thiz;
-    return (*env)->NewStringUTF(env, g_estado);
+    char limpio[512];
+    size_t i = 0;
+    for (; i < sizeof(limpio) - 1 && g_estado[i] != '\0'; i++) {
+        unsigned char c = (unsigned char)g_estado[i];
+        limpio[i] = (c >= 32 && c < 127) ? (char)c : '?';
+    }
+    limpio[i] = '\0';
+    return (*env)->NewStringUTF(env, limpio);
 }
