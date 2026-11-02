@@ -56,7 +56,7 @@ class MainActivity : Activity() {
         ajustes = Ajustes(this)
         Registro.iniciar(Carpetas.base(this))
         Migracion.ejecutar(this)
-        Registro.i("APP", "=== Subtilingus 0.7 · " + Build.MANUFACTURER + " " + Build.MODEL +
+        Registro.i("APP", "=== Subtilingus 0.7.1 · " + Build.MANUFACTURER + " " + Build.MODEL +
                 " · Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")")
         Registro.i("APP", "Carpeta de archivos: " + Carpetas.base(this).absolutePath)
 
