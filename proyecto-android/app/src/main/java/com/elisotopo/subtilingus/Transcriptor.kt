@@ -100,6 +100,11 @@ class Transcriptor(
     fun cargar(): Boolean {
         ctx = puente.initContext(archivoModelo.absolutePath)
         Registro.i("NATIVO", puente.estadoNativo() + " · manejador=" + ctx)
+        try {
+            Registro.i("CPU", puente.infoSistema())
+        } catch (e: Throwable) {
+            Registro.w("CPU", "infoSistema no disponible: " + e)
+        }
         return ctx != 0L
     }
 
@@ -148,6 +153,13 @@ class Transcriptor(
     }
 
     private fun bucle() {
+        // Prioridad alta: los hilos que crea Whisper heredan esta prioridad
+        // y así Android no los relega a los núcleos lentos en segundo plano.
+        try {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
+        } catch (e: Exception) {
+            Registro.w("WHISPER", "No se pudo subir la prioridad: " + e)
+        }
         try {
             while (true) {
                 var t: Trabajo? = null
