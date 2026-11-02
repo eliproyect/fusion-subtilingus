@@ -1,5 +1,5 @@
 // Módulo 'app'. v0.7: minSdk 29 (Android 10) porque la captura del audio
-// interno del móvil (AudioPlaybackCapture) no existe antes. versionCode 6:
+// interno del móvil (AudioPlaybackCapture) no existe antes. versionCode 7:
 // Android actualiza la APK instalada sin perder nada.
 plugins {
     id 'com.android.application'
@@ -29,7 +29,13 @@ android {
         minSdk 29
         targetSdk 34
         versionCode 7
-        versionName "v7.0"
+        versionName "v8.0"
+
+        externalNativeBuild {
+            cmake {
+                arguments '-DCMAKE_BUILD_TYPE=Release'
+            }
+        }
 
         ndk {
             // Solo CPUs ARM de 64 bits (tu Redmi y casi todos los móviles
