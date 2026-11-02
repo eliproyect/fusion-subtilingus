@@ -169,3 +169,26 @@ Java_com_elisotopo_subtilingus_WhisperBridge_estadoNativo(JNIEnv *env, jobject t
     limpio[i] = '\0';
     return (*env)->NewStringUTF(env, limpio);
 }
+
+// Diagnostico: que instrucciones del procesador usa la libreria (NEON,
+// DOTPROD, FP16...) y si nuestro C se compilo optimizado.
+JNIEXPORT jstring JNICALL
+Java_com_elisotopo_subtilingus_WhisperBridge_infoSistema(JNIEnv *env, jobject thiz)
+{
+    (void) thiz;
+#ifdef __OPTIMIZE__
+    const char *opt = "C optimizado";
+#else
+    const char *opt = "C SIN OPTIMIZAR (-O0)";
+#endif
+    char bruto[900];
+    snprintf(bruto, sizeof(bruto), "%s | %s", opt, whisper_print_system_info());
+    char limpio[900];
+    size_t i = 0;
+    for (; i < sizeof(limpio) - 1 && bruto[i] != '\0'; i++) {
+        unsigned char c = (unsigned char)bruto[i];
+        limpio[i] = (c >= 32 && c < 127) ? (char)c : '?';
+    }
+    limpio[i] = '\0';
+    return (*env)->NewStringUTF(env, limpio);
+}
