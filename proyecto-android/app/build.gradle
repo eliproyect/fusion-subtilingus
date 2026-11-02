@@ -1,5 +1,5 @@
 // Módulo 'app'. v0.7: minSdk 29 (Android 10) porque la captura del audio
-// interno del móvil (AudioPlaybackCapture) no existe antes. versionCode 5:
+// interno del móvil (AudioPlaybackCapture) no existe antes. versionCode 6:
 // Android actualiza la APK instalada sin perder nada.
 plugins {
     id 'com.android.application'
