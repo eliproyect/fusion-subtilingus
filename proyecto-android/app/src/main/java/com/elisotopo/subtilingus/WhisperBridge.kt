@@ -21,5 +21,8 @@ class WhisperBridge {
     // Resumen de la última operación hecha en C (para el Registro).
     external fun estadoNativo(): String
 
+    // Instrucciones de CPU que usa la librería y si el C va optimizado
+    external fun infoSistema(): String
+
     external fun freeContext(ctx: Long)
 }
