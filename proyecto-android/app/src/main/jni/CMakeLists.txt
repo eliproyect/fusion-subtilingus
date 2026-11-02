@@ -24,7 +24,23 @@ set(CMAKE_C_FLAGS_DEBUG "-O3 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "-O3 -DNDEBUG")
 
 cmake_minimum_required(VERSION 3.22.1)
+
+# v0.7.1: la prueba en tu Redmi mostro Whisper ~50x mas lento de lo normal.
+# Refuerzos para que la optimizacion NO se pueda perder:
+#  1) tipo de build Release forzado
+#  2) add_compile_options(-O3): va DESPUES de los flags de Debug en la
+#     linea del compilador, asi que gana a cualquier -O0
+#  3) instrucciones ARMv8.2 (dotprod + fp16) del Snapdragon 7s Gen 2 de
+#     tu Redmi Note 13 Pro: aceleran las matematicas de Whisper.
+#     (En un movil MUY antiguo esto daria "instruccion ilegal".)
+set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv8.2-a+dotprod+fp16")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8.2-a+dotprod+fp16")
+add_compile_options(-O3)
+
 project(subtilingus LANGUAGES C CXX)
+
+add_compile_options(-O3)
 
 include(FetchContent)
 
