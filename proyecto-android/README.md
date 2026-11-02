@@ -4,6 +4,11 @@ App personal para aprender idiomas con audio real: subtítulos en directo
 sobre cualquier app (BBC, Spotify, YouTube…) o desde el micrófono (TV),
 con todo guardado y herramientas de estudio.
 
+## v0.7.1
+- Refuerzos de optimización del motor nativo (Release forzado, -O3, ARMv8.2 dotprod/fp16) y prioridad alta del hilo de Whisper.
+- Nueva "Prueba de velocidad" en Ajustes y diagnóstico de CPU en el registro.
+- Dos modelos de prueba más (tiny.en sin comprimir, base.en q8).
+
 ## v0.7 — "Fase 2"
 
 - **Servicio en segundo plano**: sigue transcribiendo mientras usas otras apps.
