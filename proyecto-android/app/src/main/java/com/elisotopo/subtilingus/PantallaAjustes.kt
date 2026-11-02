@@ -103,8 +103,9 @@ class PantallaAjustes(private val a: MainActivity) : Pantalla() {
         }, a.lpd(0, WRAP, 1f))
         botones.addView(a.botonSuave("Ver registro") { verRegistro() }, a.lpd(0, WRAP, 1f, 8))
         col.addView(botones, a.lpd(MATCH, WRAP, 0f, 0, 8))
+        col.addView(a.botonSuave("⏱ Prueba de velocidad") { pruebaVelocidad() }, a.lpd(MATCH, WRAP, 0f, 0, 8))
 
-        col.addView(a.texto("Subtilingus v0.7\nTodo el audio se procesa en tu móvil. Solo se usa internet para descargar modelos y para consultar el diccionario al tocar una palabra.",
+        col.addView(a.texto("Subtilingus v0.7.1\nTodo el audio se procesa en tu móvil. Solo se usa internet para descargar modelos y para consultar el diccionario al tocar una palabra.",
             12f, Tema.TEXTO2), a.lpd(MATCH, WRAP, 0f, 0, 18))
 
         val sv = ScrollView(a)
@@ -198,6 +199,22 @@ class PantallaAjustes(private val a: MainActivity) : Pantalla() {
         }
         if (Descargas.activa == null && Descargas.error.isNotEmpty() && almacenamiento.text.isNotEmpty()) {
             // el error se muestra en la pestaña Escuchar; aquí basta con refrescar tamaños
+        }
+    }
+
+    private fun pruebaVelocidad() {
+        if (Estado.corriendo || Estado.cargando) {
+            a.toast("Detén la escucha antes de la prueba.")
+            return
+        }
+        a.toast("Midiendo… tarda unos segundos.")
+        Prueba.ejecutar(a) { resultado ->
+            AlertDialog.Builder(a)
+                .setTitle("Prueba de velocidad")
+                .setMessage(resultado + "\nReferencia: lo normal es menos de 3 s para 10 s de audio.")
+                .setPositiveButton("Compartir") { _, _ -> a.compartir(resultado, "Compartir prueba") }
+                .setNegativeButton("Cerrar", null)
+                .show()
         }
     }
 
